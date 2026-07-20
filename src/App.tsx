@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
-import { QrCode, FileText, ArrowRight, ScanLine, CheckCircle2, RotateCcw, Copy, Check } from 'lucide-react';
+import { QrCode, FileText, ArrowRight, ScanLine, CheckCircle2, RotateCcw, Copy, Check, Download } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import JSZip from 'jszip';
 import { QRScanner } from './components/QRScanner';
 
 const CHUNK_SIZE = 500; // characters per QR code chunk
@@ -24,6 +25,30 @@ export default function App() {
     } catch (err) {
       console.error('Failed to copy text', err);
     }
+  };
+
+  const handleDownloadZip = async () => {
+    const zip = new JSZip();
+    
+    chunks.forEach((_, index) => {
+      const svgElement = document.getElementById(`qr-svg-${index}`);
+      if (svgElement) {
+        const svgData = new XMLSerializer().serializeToString(svgElement);
+        // Add XML declaration to make it a valid standalone SVG file
+        const fullSvgData = `<?xml version="1.0" encoding="UTF-8" standalone="no"?>\n${svgData}`;
+        zip.file(`qr-part-${index + 1}-of-${chunks.length}.svg`, fullSvgData);
+      }
+    });
+
+    const content = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(content);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'multi-qr-sequence.zip';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const handleGenerate = () => {
@@ -140,9 +165,18 @@ export default function App() {
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                 <div className="flex items-center justify-between px-2">
                   <h2 className="text-lg font-semibold text-slate-800">Generated Sequence</h2>
-                  <span className="text-sm text-slate-500 bg-slate-200/50 px-3 py-1 rounded-full font-medium">
-                    {chunks.length} QR Code{chunks.length !== 1 && 's'}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-slate-500 bg-slate-200/50 px-3 py-1 rounded-full font-medium">
+                      {chunks.length} QR Code{chunks.length !== 1 && 's'}
+                    </span>
+                    <button
+                      onClick={handleDownloadZip}
+                      className="flex items-center gap-2 px-4 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-medium rounded-lg transition-colors"
+                    >
+                      <Download size={16} />
+                      Download ZIP
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -156,6 +190,7 @@ export default function App() {
                       </div>
                       <div className="bg-white p-2 rounded-xl border border-slate-100 shadow-sm">
                         <QRCodeSVG 
+                          id={`qr-svg-${index}`}
                           value={chunk} 
                           size={200}
                           level="M"
