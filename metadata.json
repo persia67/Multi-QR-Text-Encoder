@@ -1,0 +1,6 @@
+{
+  "name": "Multi-QR Text Encoder",
+  "description": "Convert long texts into multiple sequence-linked QR codes for easy sharing and reassembly.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
